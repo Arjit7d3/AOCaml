@@ -1,29 +1,26 @@
-let read_text filename = filename |> open_in |> In_channel.input_all
-
-let check_invalid s =
-  let len = String.length s in
-  match len mod 2 with
-  | 0 ->
-      let first_half = String.sub s 0 (len / 2) in
-      let second_half = String.sub s (len / 2) (len / 2) in
-      first_half = second_half
-  | _ -> false
+let has_period s =
+  let n = String.length s in
+  Seq.init (n - 1) (( + ) 1)
+  |> Seq.filter (fun d -> n mod d = 0)
+  |> Seq.exists (fun d ->
+      let first = String.sub s 0 d in
+      let rec check i = i = n || (String.sub s i d = first && check (i + d)) in
+      check d )
 
 let () =
-  "puzzle2.in" |> read_text |> String.trim |> String.split_on_char ','
+  In_channel.with_open_bin "puzzle2.in" In_channel.input_all
+  |> String.trim |> String.split_on_char ','
   |> List.map (fun s ->
       match String.split_on_char '-' s with
-      | [ a; b ] -> (a, b)
-      | _ -> failwith "invalid input")
+      | [a; b] ->
+          (int_of_string a, int_of_string b)
+      | _ ->
+          failwith "bad" )
   |> List.fold_left
        (fun acc (l, r) ->
-         let fold_range f acc x y =
-           let rec loop acc i = if i > y then acc else loop (f acc i) (i + 1) in
-           loop acc x
-         in
-         fold_range
-           (fun acc i ->
-             if check_invalid (string_of_int i) then acc + i else acc)
-           acc (int_of_string l) (int_of_string r))
+         acc
+         + ( Seq.init (r - l + 1) (( + ) l)
+           |> Seq.filter (fun x -> has_period (string_of_int x))
+           |> Seq.fold_left ( + ) 0 ) )
        0
   |> print_int
